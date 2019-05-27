@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>BrightLynxTeam - Test Task 3</title>
+		<style type="text/css">
+			.cell {
+				width: 50px;
+				height: 50px;
+				border: 1px solid #000000;
+
+				display: inline-block;
+			}
+			.gameBox {
+				width: 230px;
+				
+				border: 2px solid red;
+
+				margin: 0 auto 0 auto;
+				padding: 10px;
+			}
+			.startBtn {
+				margin: 10px 0  10px 0;
+			}
+		</style>
+	</head>
+	<body>
+		<span class="title">Найди пару</span>
+		<div class="gameBox">
+			<div class="cell"></div> <div class="cell"></div>
+			<div class="cell"></div> <div class="cell"></div>
+			<div class="cell"></div> <div class="cell"></div>
+			<div class="cell"></div> <div class="cell"></div>
+
+			<div class="cell"></div> <div class="cell"></div>
+			<div class="cell"></div> <div class="cell"></div>
+			<div class="cell"></div> <div class="cell"></div>
+			<div class="cell"></div> <div class="cell"></div>
+
+			<input class="startBtn" type="button" value="Старт">
+			<br>
+			<span class="timer">00:00:000</span>
+		</div>
+
+		<script type="text/javascript">
+			let cells = document.querySelectorAll('.cell');
+			
+			// объявляем новые свойства в DOM-элементе(div) и подвешиваем обработчик:		
+			for(let i = 0; i < cells.length; i++) {
+				// подвешиваем обработку "на клик" по ячейкам
+				cells[i].addEventListener('click', toggleCell); 
+				cells[i].cellColor = 'white'; // 1) пишем цвет ячейки
+				cells[i].cellNum = i;		  // 2) пишем порядковый номер ячейки
+				cells[i].cellShowed = false;
+			};
+
+			// инициализируем начальную сцену
+			// объявляем палитру цветов и массив для их хранения
+			let colors = ['red', 'green', 'blue', 'yellow', 'orange', 'cyan', 'brown', 'pink'];
+			
+			// генерим 16 неповторяющихся номеров ячеек
+			let cellNums = []; // значение - номер ячейки
+			for(let i = 0; i < cells.length; i) {
+				let rndNum = parseInt(Math.random() * cells.length);
+
+				let sameNumFlag = false;
+				for(let k = 0; k < cellNums.length; k++) {
+					if(rndNum == cellNums[k]) sameNumFlag = true;
+				}
+
+				if(!sameNumFlag) {
+					cellNums.push(rndNum);
+					i++;
+				}
+			};
+
+			// заполняем индексами из массива цветов ячейки
+			let c; 
+			for(let i = 0; i < cellNums.length; i++) {
+				i < colors.length ? c = i : c = i - (colors.length);
+				cells[cellNums[i]].cellColor = c;
+			}
+
+			let prevCell = null;
+			let currCell = null;
+
+			function toggleCell(){
+				currCell = this.cellNum;
+				if((!startFlag) || (currCell == prevCell)) return;
+
+				if(prevCell == null) { // предыдущая ячейка НЕ открыта
+					this.cellShowed = true;
+					this.style.backgroundColor = colors[this.cellColor];	
+					prevCell = this.cellNum;
+				} else {		      // ОТКРЫТА предыдущая ячейка
+					if(cells[prevCell].cellColor == this.cellColor) {
+						// цвет открытой ячейки СОВПАЛ с предыдущей
+						this.cellShowed = true;
+						this.style.backgroundColor = colors[this.cellColor];
+						prevCell = null;
+						currCell = null;
+					} else {
+						// цвет открытой ячейки ОТЛИЧЕН с предыдущей
+						cells[prevCell].cellShowed = false;
+						cells[prevCell].style.backgroundColor = 'white';
+						prevCell = null;
+					};
+				}
+
+				// проверка на выигрыш
+				if(checkEndGame()) { 
+					timer1.stop();
+					alert('Вы выиграли!\nЗатраченное время: ' + timerLabel.innerHTML);
+				}
+			}
+
+			function checkEndGame() {
+				let fillFlag = true;
+				for(let i = 0; i < cells.length; i++) {
+					if(cells[i].cellShowed == false) { fillFlag = false; break };
+				}
+
+				return fillFlag;
+			}
+
+			// реализация ТАЙМЕРА через class (ES6)
+			class Timer{
+			constructor(el, time){
+				this.el = el;
+				this.time = time;
+				this.interval;
+				this.render();
+			}
+
+			start(){
+				this.interval = setInterval(() => {
+					this.tick();
+				}, 10);
+			}
+
+			stop(){
+				clearInterval(this.interval);
+			}
+
+			tick(){
+				this.time++;
+				this.render();
+
+				if(this.time > 1000000) {
+					this.stop();
+				}
+			}
+
+			render(){
+				this.el.innerHTML = this.time;
+			}
+			}
+
+			// вспомогательный class для Timer (форматированный вывод)
+			class TimerFormat extends Timer{
+		    constructor(el, time){
+		        super(el, time);
+		        this.zeroFormatFlag = true;
+		    }
+
+		    splitTime(){
+		        let time = {};
+		        time.m = parseInt(this.time / 6000)
+		        time.s = parseInt(this.time / 100);
+		        time.ms = this.time % 100;
+		        return time;
+		    }
+
+		    _appendZero(strings, ...values) {
+	            for(let i = 0; i < values.length; i++) {
+	            	if (values[i] < 10) { values[i] = '0' + values[i]; };
+	            }; 
+	            return values;
+		    };
+
+		    render(){
+		        let time = this.splitTime();
+		        let res;
+		        if(this.zeroFormatFlag) {
+		            res = this._appendZero`${time.m}${time.s}${time.ms}`.join(':');
+		        } else 
+		            res = `${time.m}:${time.s}:${time.ms}`;
+		        	this.el.innerHTML = res;
+		    	}
+			}
+
+			// ТАЙМЕР
+			let timerLabel = document.querySelector('.timer');
+			let timer1 = new TimerFormat(timerLabel, 0);
+
+			// кнопка "старт"
+			let startFlag = false;
+			let startBtn = document.querySelector('.startBtn');
+
+			timer1.render();
+
+			startBtn.addEventListener('click', function(){
+				startFlag = true;
+				timer1.start();
+			});
+		</script>
+	</body>
+</html>
